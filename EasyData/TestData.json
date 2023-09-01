@@ -1,0 +1,41 @@
+﻿{
+  "IntMap": {
+    "TestInt": 114514
+  },
+  "FloatMap": {
+    "TestFloat": 11.3
+  },
+  "BoolMap": {
+    "TestBool": true
+  },
+  "StringMap": {
+    "TestString": "TESTString"
+  },
+  "DataMap": {},
+  "ColorMap": {
+    "TestColor": {
+      "g": 1.0,
+      "b": 1.0,
+      "a": 1.0
+    }
+  },
+  "Vector2Map": {
+    "TestVector2": {
+      "x": 1.4,
+      "y": 44.0
+    },
+    "TestVector2_2": {
+      "x": 1.4,
+      "y": 4.4
+    }
+  },
+  "Vector3Map": {},
+  "Vector4Map": {
+    "TestVector4": {
+      "x": 1.4,
+      "y": 4.4,
+      "z": 23.0,
+      "w": 114.514
+    }
+  }
+}
