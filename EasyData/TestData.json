@@ -37,5 +37,15 @@
       "z": 23.0,
       "w": 114.514
     }
+  },
+  "KeyToValueMap": {
+    "TestBool": 3,
+    "TestFloat": 1,
+    "TestColor": 5,
+    "TestInt": 2,
+    "TestString": 4,
+    "TestVector2": 6,
+    "TestVector2_2": 6,
+    "TestVector4": 8
   }
 }

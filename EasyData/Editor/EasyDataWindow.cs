@@ -12,7 +12,8 @@ public class EasyDataWindow : EditorWindow
     public static Color DeSelectColor = new Color(1, 1, 1, 0);
     [SerializeField]
     private VisualTreeAsset m_VisualTreeAsset = default;
-
+    [SerializeField]
+    private EasyDataSetting Setting;
     private TextField KeyField;
     private FloatField FloatField;
     private Toggle BoolField;
@@ -23,11 +24,11 @@ public class EasyDataWindow : EditorWindow
     private Vector3Field Vector3Field;
     private Vector4Field Vector4Field;
     private EnumField SaveValueField;
-
-    private ObjectField _objectField;
+    private Label FilePathLabel;
     private ToolbarPopupSearchField SearchKey;
     private TextField SearchKeyInput;
     private ListView KeyList;
+    
     [MenuItem("EasyData/存档编辑器",false)]
     public static void ShowExample()
     {
@@ -37,14 +38,14 @@ public class EasyDataWindow : EditorWindow
     [MenuItem("EasyData/Test/CreatSampleData",false)]
     public static void CreatSampleData()
     {
-        EasyData.SetBool("TestBool",true);
-        EasyData.SetFloat("TestFloat",11.3f);
-        EasyData.SetColor("TestColor",Color.cyan);
-        EasyData.SetInt("TestInt",114514);
-        EasyData.SetString("TestString","TESTString");
-        EasyData.SetVector2("TestVector2",new Vector2(1.4f,44));
-        EasyData.SetVector2("TestVector2_2",new Vector2(1.4f,4.4f));
-        EasyData.SetVector4("TestVector4",new Vector4(1.4f,4.4f,23,114.514f));
+        EasyData.SetValue("TestBool",true);
+        EasyData.SetValue("TestFloat",11.3f);
+        EasyData.SetValue("TestColor",Color.cyan);
+        EasyData.SetValue("TestInt",114514);
+        EasyData.SetValue("TestString","TESTString");
+        EasyData.SetValue("TestVector2",new Vector2(1.4f,44));
+        EasyData.SetValue("TestVector2_2",new Vector2(1.4f,4.4f));
+        EasyData.SetValue("TestVector4",new Vector4(1.4f,4.4f,23,114.514f));
     }
     [MenuItem("EasyData/Test/SaveSampleData",false)]
     public static void SaveData()
@@ -66,11 +67,19 @@ public class EasyDataWindow : EditorWindow
 
     public void CreateGUI()
     {
-        // ColorUtility.TryParseHtmlString("#f289c1", out SelectColor);
         m_VisualTreeAsset.CloneTree(rootVisualElement);
         var value = rootVisualElement.Q<VisualElement>("Value");
         var key = rootVisualElement.Q<VisualElement>("Key");
         var file = rootVisualElement.Q<VisualElement>("File");
+
+        FilePathLabel = file.Q<VisualElement>("FilePathElement").Q<Label>("FilePath");
+        if(Setting is null)
+            Debug.Log("SoSetting is Null");
+        else
+        {
+            FilePathLabel.text = Setting.filePath;
+            EasyData.Load(Setting.filePath);
+        }
         KeyField = value.Q<TextField>("KeyName");
         KeyField.RegisterCallback<InputEvent>((evt) =>
         {
@@ -86,7 +95,6 @@ public class EasyDataWindow : EditorWindow
         FloatField = value.Q<FloatField>("FloatValue");
         BoolField = value.Q<Toggle>("BoolValue");
         IntField = value.Q<IntegerField>("IntValue");
-        // SelectColor = IntField.style.backgroundColor.value;
         StringField = value.Q<TextField>("StringValue");
         ColorField = value.Q<ColorField>("ColorValue");
         Vector2Field = value.Q<Vector2Field>("Vector2Value");
@@ -100,26 +108,22 @@ public class EasyDataWindow : EditorWindow
         SearchKey = key.Q<ToolbarPopupSearchField>("SearchKey");
         KeyList = key.Q<ListView>("KeyList");
         #endregion
-
-        _objectField = file.Q<ObjectField>();
+        
         file.Q<Button>("SaveFile").clickable = new Clickable(() =>
         {
-            if(_objectField.objectType is null)
-                return;
-            string filePath = AssetDatabase.GetAssetPath(_objectField.value);
+            string filePath = GetFilePath();
             if(string.IsNullOrEmpty(filePath))
                 return;
-            filePath = filePath.Replace("Assets", "");
-            
-            EasyData.Save(Application.dataPath + filePath);
+            EasyData.Save(filePath);
         });
         file.Q<Button>("LoadFile").clickable = new Clickable(() =>
-        {
-            if(_objectField.objectType is null)
-                return;
-            string filePath = AssetDatabase.GetAssetPath(_objectField.value);
+        { 
+            string filePath = EditorUtility.OpenFilePanel("选择文件", Application.dataPath,"json");
             if(string.IsNullOrEmpty(filePath))
                 return;
+            Setting.filePath = filePath;
+            FilePathLabel.text = Setting.filePath;
+
             EasyData.Load(filePath);
         });
         file.Q<Button>("DeleteData").clickable = new Clickable(EasyData.DeleteAll);
@@ -155,57 +159,56 @@ public class EasyDataWindow : EditorWindow
         {
             case EasyValueType.Int:
                 int intValue = default;
-                EasyData.TryGetInt(key, out intValue);
+                EasyData.TryGetValue(key, out intValue);
                 IntField.value = intValue;
                 IntField.labelElement.style.backgroundColor = SelectColor;
                 break;
             case EasyValueType.Float:
                 float floatValue = default;
-                EasyData.TryGetFloat(key, out floatValue);
+                EasyData.TryGetValue(key, out floatValue);
                 FloatField.value = floatValue;
                 FloatField.labelElement.style.backgroundColor = SelectColor;
                 break;
             case EasyValueType.String:
                 string stringValue = default;
-                EasyData.TryGetString(key, out stringValue);
+                EasyData.TryGetValue(key, out stringValue);
                 StringField.value = stringValue;
                 StringField.labelElement.style.backgroundColor = SelectColor;
 
                 break;
             case EasyValueType.Boolean:
                 bool boolValue = default;
-                EasyData.TryGetBool(key, out boolValue);
+                EasyData.TryGetValue(key, out boolValue);
                 BoolField.value = boolValue;
                 BoolField.labelElement.style.backgroundColor = SelectColor;
 
                 break;
             case EasyValueType.Color:
                 Color colorValue = default;
-                EasyData.TryGetColor(key, out colorValue);
+                EasyData.TryGetValue(key, out colorValue);
                 ColorField.value = colorValue;
                 ColorField.labelElement.style.backgroundColor = SelectColor;
 
                 break;
             case EasyValueType.Vector2:
                 Vector2 vector2 = default;
-                EasyData.TryGetVector2(key, out vector2);
+                EasyData.TryGetValue(key, out vector2);
                 Vector2Field.value = vector2;
                 Vector2Field.labelElement.style.backgroundColor = SelectColor;
 
                 break;
             case EasyValueType.Vector3:
                 Vector3 vector3 = default;
-                EasyData.TryGetVector3(key, out vector3);
+                EasyData.TryGetValue(key, out vector3);
                 Vector3Field.value = vector3;
                 Vector3Field.labelElement.style.backgroundColor = SelectColor;
 
                 break;
             case EasyValueType.Vector4:
                 Vector4 vector4 = default;
-                EasyData.TryGetVector4(key, out vector4);
+                EasyData.TryGetValue(key, out vector4);
                 Vector4Field.value = vector4;
                 Vector4Field.labelElement.style.backgroundColor = SelectColor;
-
                 break;
             default:
                 break;
@@ -226,28 +229,28 @@ public class EasyDataWindow : EditorWindow
             switch (easyValueType)
             {
                 case EasyValueType.Boolean:
-                    EasyData.SetBool(key,BoolField.value);
+                    EasyData.SetValue(key,BoolField.value);
                     break;
                 case EasyValueType.Float:
-                    EasyData.SetFloat(key,FloatField.value);
+                    EasyData.SetValue(key,FloatField.value);
                     break;
                 case EasyValueType.Int:
-                    EasyData.SetInt(key,IntField.value);
+                    EasyData.SetValue(key,IntField.value);
                     break;
                 case EasyValueType.String:
-                    EasyData.SetString(key,StringField.value);
+                    EasyData.SetValue(key,StringField.value);
                     break;
                 case EasyValueType.Color:
-                    EasyData.SetColor(key,ColorField.value);
+                    EasyData.SetValue(key,ColorField.value);
                     break;
                 case EasyValueType.Vector2:
-                    EasyData.SetVector2(key,Vector2Field.value);
+                    EasyData.SetValue(key,Vector2Field.value);
                     break;
                 case EasyValueType.Vector3:
-                    EasyData.SetVector3(key,Vector3Field.value);
+                    EasyData.SetValue(key,Vector3Field.value);
                     break;
                 case EasyValueType.Vector4:
-                    EasyData.SetVector3(key,Vector3Field.value);
+                    EasyData.SetValue(key,Vector3Field.value);
                     break;
                 default:
                     break;
@@ -278,6 +281,11 @@ public class EasyDataWindow : EditorWindow
     private void Refresh()
     {
         LoadKeyList(SearchKeyInput.value);
+    }
+
+    private string GetFilePath()
+    {
+        return Setting.filePath;
     }
 
     private List<(string,EasyValueType)> keyList = new();

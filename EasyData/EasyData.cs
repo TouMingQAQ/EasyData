@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -6,25 +7,563 @@ using System.Reflection;
 using System.Text;
 using UnityEngine;
 using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Serialization;
+using UnityEngine.Pool;
 
 namespace T2TFramework.Data
 {
-    
+    /// <summary>
+    /// 存档序列化结构体
+    /// </summary>
     [Serializable]
-    public struct SaveDataContainer
+    public class EasyDataContainer
     {
-        public Dictionary<string, int> IntMap;
-        public Dictionary<string, float> FloatMap;
-        public Dictionary<string, bool> BoolMap;
-        public Dictionary<string, string> StringMap;
-        public Dictionary<string, IData> DataMap;
-        public Dictionary<string, Color> ColorMap;
-        public Dictionary<string, Vector2> Vector2Map;
-        public Dictionary<string, Vector3> Vector3Map;
-        public Dictionary<string, Vector4> Vector4Map;
+        /// <summary>
+        /// EasyData对象池，每次取出时需要做初始化操作才可使用
+        /// </summary>
+        public static ObjectPool<EasyDataContainer> ContainerPool =
+            new ObjectPool<EasyDataContainer>(() => new EasyDataContainer(), (container) => { },
+                (container) => { container.Release(); });
+
+        public string FilePath;
+        public Dictionary<string, int> IntMap = DictionaryPool<string, int>.Get();
+        public Dictionary<string, float> FloatMap = DictionaryPool<string, float>.Get();
+        public Dictionary<string, bool> BoolMap = DictionaryPool<string, bool>.Get();
+        public Dictionary<string, string> StringMap = DictionaryPool<string, string>.Get();
+        public Dictionary<string, IData> DataMap = DictionaryPool<string, IData>.Get();
+        public Dictionary<string, Color> ColorMap = DictionaryPool<string, Color>.Get();
+        public Dictionary<string, Vector2> Vector2Map = DictionaryPool<string, Vector2>.Get();
+        public Dictionary<string, Vector3> Vector3Map = DictionaryPool<string, Vector3>.Get();
+        public Dictionary<string, Vector4> Vector4Map = DictionaryPool<string, Vector4>.Get();
+        public Dictionary<string, EasyValueType> KeyToValueMap = DictionaryPool<string, EasyValueType>.Get();
+
+        public EasyDataContainer()
+        {
+        }
+
+        public EasyDataContainer(string filePath)
+        {
+            SetFilePath(filePath);
+        }
+
+        public EasyDataContainer Init()
+        {
+            IntMap = DictionaryPool<string, int>.Get();
+            FloatMap = DictionaryPool<string, float>.Get();
+            BoolMap = DictionaryPool<string, bool>.Get();
+            StringMap = DictionaryPool<string, string>.Get();
+            DataMap = DictionaryPool<string, IData>.Get();
+            ColorMap = DictionaryPool<string, Color>.Get();
+            Vector2Map = DictionaryPool<string, Vector2>.Get();
+            Vector3Map = DictionaryPool<string, Vector3>.Get();
+            Vector4Map = DictionaryPool<string, Vector4>.Get();
+            KeyToValueMap = DictionaryPool<string, EasyValueType>.Get();
+            FilePath = string.Empty;
+            return this;
+        }
+
+        public EasyDataContainer Release()
+        {
+            DictionaryPool<string, float>.Release(FloatMap);
+            DictionaryPool<string, bool>.Release(BoolMap);
+            DictionaryPool<string, string>.Release(StringMap);
+            DictionaryPool<string, int>.Release(IntMap);
+            DictionaryPool<string, IData>.Release(DataMap);
+            DictionaryPool<string, Color>.Release(ColorMap);
+            DictionaryPool<string, Vector2>.Release(Vector2Map);
+            DictionaryPool<string, Vector3>.Release(Vector3Map);
+            DictionaryPool<string, Vector4>.Release(Vector4Map);
+            DictionaryPool<string, EasyValueType>.Release(KeyToValueMap);
+            FilePath = string.Empty;
+            return this;
+        }
+
+
+        #region 数据操作1
+
+        /// <summary>
+        /// 写入数据
+        /// </summary>
+        /// <param name="key">关键字</param>
+        /// <param name="value">数据</param>
+        public void SetValue(string key, float value)
+        {
+            Delete(key);
+            FloatMap.Add(key, value);
+        }
+
+        public void SetValue(string key, bool value)
+        {
+            Delete(key);
+            BoolMap.Add(key, value);
+        }
+
+        public void SetValue(string key, string value)
+        {
+            Delete(key);
+            StringMap.Add(key, value);
+        }
+
+        public void SetValue(string key, int value)
+        {
+            Delete(key);
+            IntMap.Add(key, value);
+        }
+
+        public void SetValue(string key, Color value)
+        {
+            Delete(key);
+            ColorMap.Add(key, value);
+        }
+
+        public void SetValue(string key, Vector2 value)
+        {
+            Delete(key);
+            Vector2Map.Add(key, value);
+        }
+
+        public void SetValue(string key, Vector3 value)
+        {
+            Delete(key);
+            Vector3Map.Add(key, value);
+        }
+
+        public void SetValue(string key, Vector4 value)
+        {
+            Delete(key);
+            Vector4Map.Add(key, value);
+        }
+
+        /// <summary>
+        /// 尝试获取数据
+        /// </summary>
+        /// <param name="key">关键字</param>
+        /// <param name="value">读取数据</param>
+        /// <param name="defaultValue">默认数据</param>
+        /// <returns></returns>
+        public bool TryGetValue(string key, out float value, float defaultValue = default)
+        {
+            value = defaultValue;
+            if (!FloatMap.ContainsKey(key))
+                return false;
+            value = FloatMap[key];
+            return true;
+        }
+
+        public bool TryGetValue(string key, out bool value, bool defaultValue = default)
+        {
+            value = defaultValue;
+            if (!BoolMap.ContainsKey(key))
+                return false;
+            value = BoolMap[key];
+            return true;
+        }
+
+        public bool TryGetValue(string key, out string value, string defaultValue = default)
+        {
+            value = defaultValue;
+            if (!StringMap.ContainsKey(key))
+                return false;
+            value = StringMap[key];
+            return true;
+        }
+
+        public bool TryGetValue(string key, out int value, int defaultValue = default)
+        {
+            value = defaultValue;
+            if (!IntMap.ContainsKey(key))
+                return false;
+            value = IntMap[key];
+            return true;
+        }
+
+        public bool TryGetValue(string key, out Color value, Color defaultValue = default)
+        {
+            value = defaultValue;
+            if (!ColorMap.ContainsKey(key))
+                return false;
+            value = ColorMap[key];
+            return true;
+        }
+
+        public bool TryGetValue(string key, out Vector2 value, Vector2 defaultValue = default)
+        {
+            value = defaultValue;
+            if (!Vector2Map.ContainsKey(key))
+                return false;
+            value = Vector2Map[key];
+            return true;
+        }
+
+        public bool TryGetValue(string key, out Vector3 value, Vector3 defaultValue = default)
+        {
+            value = defaultValue;
+            if (!Vector3Map.ContainsKey(key))
+                return false;
+            value = Vector3Map[key];
+            return true;
+        }
+
+        public bool TryGetValue(string key, out Vector4 value, Vector4 defaultValue = default)
+        {
+            value = defaultValue;
+            if (!Vector4Map.ContainsKey(key))
+                return false;
+            value = Vector4Map[key];
+            return true;
+        }
+
+        #endregion
+
+        #region 数据操作2
+
+        /// <summary>
+        /// 设置自定义数据类型
+        /// </summary>
+        /// <param name="key"></param>
+        /// <param name="data"></param>
+        /// <typeparam name="T"></typeparam>
+        public void SetData<T>(string key, T data) where T : struct, IData
+        {
+#if UNITY_EDITOR
+            var type = typeof(T);
+            if (!Attribute.IsDefined(type, typeof(SerializableAttribute)))
+            {
+                Debug.LogError($"数据类型：{type} 未添加[Serializable]标签");
+            }
+#endif
+            Delete(key);
+            DataMap[key] = data;
+            KeyToValueMap.Add(key, EasyValueType.None);
+        }
+
+        /// <summary>
+        /// 判断是否有某个Key
+        /// </summary>
+        /// <param name="key"></param>
+        /// <returns></returns>
+        public bool HasKey(string key)
+        {
+            if (TryGetMap(key, out var map))
+                return map.Contains(key);
+            return false;
+        }
+
+        /// <summary>
+        /// 判断是否有某个Key
+        /// </summary>
+        /// <param name="key"></param>
+        /// <param name="valueType"></param>
+        /// <returns></returns>
+        public bool HasKey(string key, EasyValueType valueType)
+        {
+            if (TryGetMap(valueType, out var map))
+                return map.Contains(key);
+            return false;
+        }
+
+        /// <summary>
+        /// 尝试删除某个Key
+        /// </summary>
+        /// <param name="key"></param>
+        /// <param name="data"></param>
+        /// <typeparam name="T"></typeparam>
+        /// <returns></returns>
+        public bool TryDelete<T>(string key, T data = default)
+        {
+            IDictionary map = GetMap(data);
+            if (map is null)
+                return false;
+            map.Remove(key);
+            return true;
+        }
+
+        /// <summary>
+        /// 删除Key
+        /// </summary>
+        /// <param name="key"></param>
+        public void Delete(string key)
+        {
+            IntMap.Remove(key);
+            FloatMap.Remove(key);
+            BoolMap.Remove(key);
+            StringMap.Remove(key);
+            DataMap.Remove(key);
+            ColorMap.Remove(key);
+            Vector2Map.Remove(key);
+            Vector3Map.Remove(key);
+            Vector4Map.Remove(key);
+            KeyToValueMap.Remove(key);
+        }
+
+        /// <summary>
+        /// 根据数据类型删除Key
+        /// </summary>
+        /// <param name="key"></param>
+        /// <param name="valueType"></param>
+        public void Delete(string key, EasyValueType valueType)
+        {
+            GetMap(valueType).Remove(key);
+            KeyToValueMap.Remove(key);
+        }
+
+        /// <summary>
+        /// 清除所有数据
+        /// </summary>
+        public void DeleteAll()
+        {
+            IntMap.Clear();
+            FloatMap.Clear();
+            BoolMap.Clear();
+            StringMap.Clear();
+            DataMap.Clear();
+            ColorMap.Clear();
+            Vector2Map.Clear();
+            Vector3Map.Clear();
+            Vector4Map.Clear();
+            KeyToValueMap.Clear();
+        }
+
+        /// <summary>
+        /// 获得某个键存储的数据类型
+        /// </summary>
+        /// <param name="key"></param>
+        /// <returns></returns>
+        public EasyValueType GetValueType(string key)
+        {
+            if (IntMap.ContainsKey(key))
+                return EasyValueType.Int;
+            if (BoolMap.ContainsKey(key))
+                return EasyValueType.Boolean;
+            if (FloatMap.ContainsKey(key))
+                return EasyValueType.Float;
+            if (StringMap.ContainsKey(key))
+                return EasyValueType.String;
+            if (ColorMap.ContainsKey(key))
+                return EasyValueType.Color;
+            if (Vector2Map.ContainsKey(key))
+                return EasyValueType.Vector2;
+            if (Vector3Map.ContainsKey(key))
+                return EasyValueType.Vector3;
+            if (Vector4Map.ContainsKey(key))
+                return EasyValueType.Vector4;
+            return EasyValueType.None;
+        }
+
+        /// <summary>
+        /// 读取自定义数据类型
+        /// </summary>
+        /// <param name="key"></param>
+        /// <param name="defaultData"></param>
+        /// <typeparam name="T"></typeparam>
+        /// <returns></returns>
+        public T GetData<T>(string key, T defaultData = default) where T : struct, IData
+        {
+#if UNITY_EDITOR
+            var type = typeof(T);
+            if (!Attribute.IsDefined(type, typeof(SerializableAttribute)))
+            {
+                Debug.LogError($"数据类型：{type} 未添加[Serializable]标签");
+            }
+#endif
+            if (!DataMap.ContainsKey(key))
+                return defaultData;
+            else
+                return DataMap[key] is T ? (T)DataMap[key] : default;
+        }
+
+        /// <summary>
+        /// 尝试获取自定义数据类型
+        /// </summary>
+        /// <param name="key"></param>
+        /// <param name="value"></param>
+        /// <typeparam name="T"></typeparam>
+        /// <returns>数据库中存有Key且和指定类型匹配则返回</returns>
+        public bool TryGetData<T>(string key, out T value) where T : struct, IData
+        {
+#if UNITY_EDITOR
+            var type = typeof(T);
+            if (!Attribute.IsDefined(type, typeof(SerializableAttribute)))
+            {
+                Debug.LogError($"数据类型：{type} 未添加[Serializable]标签");
+            }
+#endif
+            value = default;
+            if (!DataMap.ContainsKey(key))
+                return false;
+            if (DataMap[key] is not T data)
+                return false;
+            value = data;
+            return true;
+        }
+
+        private bool TryGetMap(EasyValueType valueType, out IDictionary map)
+        {
+            map = GetMap(valueType);
+            return map is not null;
+        }
+
+        private bool TryGetMap<T>(out IDictionary map, T data = default)
+        {
+            map = GetMap(data);
+            return map is not null;
+        }
+
+        private bool TryGetMap(string key, out IDictionary map)
+        {
+            map = GetMap(key);
+            return map is not null;
+        }
+
+        private IDictionary GetMap(EasyValueType valueType)
+        {
+            IDictionary map = valueType switch
+            {
+                EasyValueType.None => null,
+                EasyValueType.Float => FloatMap,
+                EasyValueType.Int => IntMap,
+                EasyValueType.Boolean => BoolMap,
+                EasyValueType.String => StringMap,
+                EasyValueType.Color => ColorMap,
+                EasyValueType.Vector2 => Vector2Map,
+                EasyValueType.Vector3 => Vector3Map,
+                EasyValueType.Vector4 => Vector4Map,
+                _ => null
+            };
+            return map;
+        }
+
+        private IDictionary GetMap(string key)
+        {
+            if (KeyToValueMap.TryGetValue(key, out var value))
+                return GetMap(value);
+            return null;
+        }
+
+        private IDictionary GetMap<T>(T data = default)
+        {
+            IDictionary map = data switch
+            {
+                float => FloatMap,
+                string => StringMap,
+                bool => BoolMap,
+                int => IntMap,
+                Color => ColorMap,
+                Vector2 => Vector2Map,
+                Vector3 => Vector3Map,
+                Vector4 => Vector4Map,
+                _ => null
+            };
+            return map;
+        }
+
+        #endregion
+
+        /// <summary>
+        /// 设置存储路径
+        /// </summary>
+        /// <param name="filePath"></param>
+        public EasyDataContainer SetFilePath(string filePath)
+        {
+            FilePath = filePath;
+            return this;
+        }
+
+        /// <summary>
+        /// 保存存档
+        /// </summary>
+        public async void Save()
+        {
+            if (string.IsNullOrEmpty(FilePath))
+            {
+                Debug.LogError("保存路径不能为空");
+                return;
+            }
+            try
+            {
+                JsonSerializerSettings settings = new JsonSerializerSettings();
+                settings.ReferenceLoopHandling = ReferenceLoopHandling.Ignore;
+                settings.NullValueHandling = NullValueHandling.Ignore;
+                settings.DefaultValueHandling = DefaultValueHandling.Ignore;
+                settings.Formatting = Formatting.Indented;
+                settings.MissingMemberHandling = MissingMemberHandling.Ignore;
+                settings.MaxDepth = 1;
+                settings.ContractResolver = new ShouldSerialize();
+                string jsonValue = JsonConvert.SerializeObject(this, settings);
+                await File.WriteAllTextAsync(FilePath, jsonValue, Encoding.UTF8);
+                Debug.Log($"数据大小：{System.Text.Encoding.UTF8.GetByteCount(jsonValue)}");
+                Debug.Log($"保存路径: {FilePath}");
+            }
+            catch (Exception e)
+            {
+                Debug.LogError($"保存路径：{FilePath}\n保存错误");
+                Debug.LogError(e);
+            }
+        }
+
+        /// <summary>
+        /// 加载存档
+        /// </summary>
+        public async void Load()
+        {
+            if (string.IsNullOrEmpty(FilePath))
+            {
+                Debug.LogError("读取路径不能为空");
+                return;
+            }
+            try
+            {
+                string jsonValue = await File.ReadAllTextAsync(FilePath, Encoding.UTF8);
+                EasyDataContainer container = JsonConvert.DeserializeObject<EasyDataContainer>(jsonValue);
+                Debug.Log($"数据大小：{System.Text.Encoding.UTF8.GetByteCount(jsonValue)}");
+                Debug.Log($"读取路径: {FilePath}");
+            }
+            catch (Exception e)
+            {
+                Debug.LogError($"读取路径：{FilePath}\n读取错误");
+                Debug.LogError(e);
+            }
+        }
+
+        private void LoadContainer(EasyDataContainer container)
+        {
+            FloatMap = container.FloatMap ?? DictionaryPool<string, float>.Get();
+            BoolMap = container.BoolMap ?? DictionaryPool<string, bool>.Get();
+            StringMap = container.StringMap ?? DictionaryPool<string, string>.Get();
+            IntMap = container.IntMap ?? DictionaryPool<string, int>.Get();
+            DataMap = container.DataMap ?? DictionaryPool<string, IData>.Get();
+            ColorMap = container.ColorMap ?? DictionaryPool<string, Color>.Get();
+            Vector2Map = container.Vector2Map ?? DictionaryPool<string, Vector2>.Get();
+            Vector3Map = container.Vector3Map ?? DictionaryPool<string, Vector3>.Get();
+            Vector4Map = container.Vector4Map ?? DictionaryPool<string, Vector4>.Get();
+            KeyToValueMap = container.KeyToValueMap ?? InitKeyToValueMap();
+        }
+
+        private Dictionary<string, EasyValueType> InitKeyToValueMap()
+        {
+            var _keyToValueMap = DictionaryPool<string, EasyValueType>.Get();
+            foreach (var key in FloatMap.Keys)
+                _keyToValueMap[key] = EasyValueType.Float;
+            foreach (var key in BoolMap.Keys)
+                _keyToValueMap[key] = EasyValueType.Boolean;
+            foreach (var key in IntMap.Keys)
+                _keyToValueMap[key] = EasyValueType.Int;
+            foreach (var key in DataMap.Keys)
+                _keyToValueMap[key] = EasyValueType.None;
+            foreach (var key in StringMap.Keys)
+                _keyToValueMap[key] = EasyValueType.String;
+            foreach (var key in ColorMap.Keys)
+                _keyToValueMap[key] = EasyValueType.Color;
+            foreach (var key in Vector2Map.Keys)
+                _keyToValueMap[key] = EasyValueType.Vector2;
+            foreach (var key in Vector3Map.Keys)
+                _keyToValueMap[key] = EasyValueType.Vector3;
+            foreach (var key in Vector4Map.Keys)
+                _keyToValueMap[key] = EasyValueType.Vector4;
+            return _keyToValueMap;
+        }
     }
+
     [Serializable]
     public struct TransformContainer
     {
@@ -41,7 +580,8 @@ namespace T2TFramework.Data
             transform.localScale = Scale;
             return true;
         }
-        public static implicit  operator TransformContainer(Transform transform)
+
+        public static implicit operator TransformContainer(Transform transform)
         {
             return new TransformContainer()
             {
@@ -51,6 +591,7 @@ namespace T2TFramework.Data
             };
         }
     }
+
     [Serializable]
     public struct RectTransformContainer
     {
@@ -75,6 +616,7 @@ namespace T2TFramework.Data
             rectTransform.offsetMin = OffsetMin;
             return true;
         }
+
         public static implicit operator RectTransformContainer(RectTransform rectTransform)
         {
             RectTransformContainer container = new()
@@ -90,40 +632,25 @@ namespace T2TFramework.Data
             return container;
         }
     }
-    [Serializable]
-    public struct ColorContainer
+
+    /// <summary>
+    /// 自定义存储类型接口
+    /// </summary>
+    public interface IData
     {
-        public float r;
-        public float g;
-        public float b;
-        public float a;
-
-        public ColorContainer(float r, float g, float b, float a)
-        {
-            this.r = r;
-            this.g = g;
-            this.b = b;
-            this.a = a;
-        }
-
-        public static implicit operator ColorContainer(Color color)
-        {
-            return new ColorContainer(color.r, color.g, color.b, color.a);
-        }
-
-        public static implicit operator Color(ColorContainer container)
-        {
-            return new Color(container.r, container.g, container.b, container.a);
-        }
-
     }
-    
-    public interface IData{}
 
     public static partial class EasyData
     {
-        private static Dictionary<string, IData> _dataMap = new();
-        public static void SetData<T>(string key,T data) where T : struct,IData
+        private static Dictionary<string, IData> DataMap = new();
+
+        /// <summary>
+        /// 设置自定义数据类型
+        /// </summary>
+        /// <param name="key"></param>
+        /// <param name="data"></param>
+        /// <typeparam name="T"></typeparam>
+        public static void SetData<T>(string key, T data) where T : struct, IData
         {
 #if UNITY_EDITOR
             var type = typeof(T);
@@ -133,10 +660,18 @@ namespace T2TFramework.Data
             }
 #endif
             Delete(key);
-            _dataMap[key] = data;
+            DataMap[key] = data;
+            KeyToValueMap.Add(key, EasyValueType.None);
         }
 
-        public static T GetData<T>(string key,T defaultData = default)  where T : struct,IData
+        /// <summary>
+        /// 读取自定义数据类型
+        /// </summary>
+        /// <param name="key"></param>
+        /// <param name="defaultData"></param>
+        /// <typeparam name="T"></typeparam>
+        /// <returns></returns>
+        public static T GetData<T>(string key, T defaultData = default) where T : struct, IData
         {
 #if UNITY_EDITOR
             var type = typeof(T);
@@ -145,13 +680,20 @@ namespace T2TFramework.Data
                 Debug.LogError($"数据类型：{type} 未添加[Serializable]标签");
             }
 #endif
-            if (!_dataMap.ContainsKey(key))
+            if (!DataMap.ContainsKey(key))
                 return defaultData;
             else
-                return _dataMap[key] is T ? (T)_dataMap[key] : default;
+                return DataMap[key] is T ? (T)DataMap[key] : default;
         }
 
-        public static bool TryGetData<T>(string key,out T value) where T : struct,IData
+        /// <summary>
+        /// 尝试获取自定义数据类型
+        /// </summary>
+        /// <param name="key"></param>
+        /// <param name="value"></param>
+        /// <typeparam name="T"></typeparam>
+        /// <returns>数据库中存有Key且和指定类型匹配则返回</returns>
+        public static bool TryGetData<T>(string key, out T value) where T : struct, IData
         {
 #if UNITY_EDITOR
             var type = typeof(T);
@@ -161,336 +703,447 @@ namespace T2TFramework.Data
             }
 #endif
             value = default;
-            if (!_dataMap.ContainsKey(key))
+            if (!DataMap.ContainsKey(key))
                 return false;
-            value = _dataMap[key] is T ? (T)_dataMap[key] : default;
+            if (DataMap[key] is not T data)
+                return false;
+            value = data;
             return true;
         }
     }
+
     public static partial class EasyData
     {
-        private static Dictionary<string, int> _intMap = new();
-        private static Dictionary<string, float> _floatMap = new();
-        private static Dictionary<string, bool> _boolMap = new();
-        private static Dictionary<string, string> _stringMap = new();
+        private static Dictionary<string, EasyValueType> KeyToValueMap = new();
+
+        //常用数据
+        private static Dictionary<string, int> IntMap = new();
+        private static Dictionary<string, float> FloatMap = new();
+        private static Dictionary<string, bool> BoolMap = new();
+
+        private static Dictionary<string, string> StringMap = new();
+
         //Unity数据
-        private static Dictionary<string, Color> _colorMap = new();
-        private static Dictionary<string, Vector2> _vector2Map = new();
-        private static Dictionary<string, Vector3> _vector3Map = new();
-        private static Dictionary<string, Vector4> _vector4Map = new();
+        private static Dictionary<string, Color> ColorMap = new();
+        private static Dictionary<string, Vector2> Vector2Map = new();
+        private static Dictionary<string, Vector3> Vector3Map = new();
+
+        private static Dictionary<string, Vector4> Vector4Map = new();
+
         //未投放使用
         private static Dictionary<string, TransformContainer> _transformMap = new();
         private static Dictionary<string, RectTransformContainer> _rectTransformMap = new();
-        
-        
+
+        /// <summary>
+        /// 文件存储的路径
+        /// </summary>
         private static string _defaultDataPath = $"{Application.dataPath}/{_fileName}";
-        private static string _fileName = Guid.NewGuid().ToString()+".data";
+
+        private static string _fileName = Application.identifier + ".json";
+
+        /// <summary>
+        /// 数据存储的回调
+        /// </summary>
         public static event Action<DataSaveState> OnDataSave;
+
+        /// <summary>
+        /// 加载数据的回调
+        /// </summary>
         public static event Action<DataSaveState> OnDataLoad;
+
+        /// <summary>
+        /// 数据加载和存储的异常回调
+        /// </summary>
         public static event Action<Exception> OnThrowException;
-        
     }
+
     //设置数据
     public static partial class EasyData
     {
-        public static void SetFloat(string key, float value)
+        /// <summary>
+        /// 写入数据
+        /// </summary>
+        /// <param name="key">关键字</param>
+        /// <param name="value">数据</param>
+        public static void SetValue(string key, float value)
         {
             Delete(key);
-            _floatMap.Add(key,value);
-        }
-        public static void SetBool(string key, bool value)
-        {
-            Delete(key);
-            _boolMap.Add(key,value);
-        }
-        public static void SetString(string key, string value)
-        {
-            Delete(key);
-            _stringMap.Add(key,value);
-        }
-        public static void SetInt(string key, int value)
-        {
-            Delete(key);
-            _intMap.Add(key,value);
+            FloatMap.Add(key, value);
         }
 
-        public static void SetColor(string key, Color value)
+        public static void SetValue(string key, bool value)
         {
             Delete(key);
-            _colorMap.Add(key,value);
+            BoolMap.Add(key, value);
         }
-        
-        public static void SetVector2(string key, Vector2 value)
+
+        public static void SetValue(string key, string value)
         {
             Delete(key);
-            _vector2Map.Add(key,value);
+            StringMap.Add(key, value);
         }
-        public static void SetVector3(string key, Vector3 value)
+
+        public static void SetValue(string key, int value)
         {
             Delete(key);
-            _vector3Map.Add(key,value);
+            IntMap.Add(key, value);
         }
-        public static void SetVector4(string key, Vector4 value)
+
+        public static void SetValue(string key, Color value)
         {
             Delete(key);
-            _vector4Map.Add(key,value);
+            ColorMap.Add(key, value);
         }
-     
+
+        public static void SetValue(string key, Vector2 value)
+        {
+            Delete(key);
+            Vector2Map.Add(key, value);
+        }
+
+        public static void SetValue(string key, Vector3 value)
+        {
+            Delete(key);
+            Vector3Map.Add(key, value);
+        }
+
+        public static void SetValue(string key, Vector4 value)
+        {
+            Delete(key);
+            Vector4Map.Add(key, value);
+        }
     }
+
     //尝试获取数据,如果数据不存在，则会使用默认数据，
     public static partial class EasyData
     {
-        public static bool TryGetFloat(string key,out float value,float defaultValue = default,bool saveDefaultValue = false)
+        /// <summary>
+        /// 尝试获取数据
+        /// </summary>
+        /// <param name="key">关键字</param>
+        /// <param name="value">读取数据</param>
+        /// <param name="defaultValue">默认数据</param>
+        /// <returns></returns>
+        public static bool TryGetValue(string key, out float value, float defaultValue = default)
         {
             value = defaultValue;
-            if (!_floatMap.ContainsKey(key))
-            {
-                if(saveDefaultValue)
-                    _floatMap.Add(key,value);
+            if (!FloatMap.ContainsKey(key))
                 return false;
-            }
-            value = _floatMap[key];
-            return true;
-        }
-        public static bool TryGetBool(string key,out bool value,bool defaultValue = default,bool saveDefaultValue = false)
-        {
-            value = defaultValue;
-            if (!_boolMap.ContainsKey(key))
-            {
-                if(saveDefaultValue)
-                    _boolMap.Add(key,value);
-                return false;
-            }
-            value = _boolMap[key];
-            return true;
-        }
-        public static bool TryGetString(string key,out string value , string defaultValue = default,bool saveDefaultValue = false)
-        {
-            value = defaultValue;
-            if (!_stringMap.ContainsKey(key))
-            {
-                if(saveDefaultValue)
-                    _stringMap.Add(key,value);
-                return false;
-            }
-            value = _stringMap[key];
-            return true;
-        }
-        public static bool TryGetInt(string key,out int value,int defaultValue = default,bool saveDefaultValue = false)
-        {
-            value = defaultValue;
-            if (!_intMap.ContainsKey(key))
-            {
-                if(saveDefaultValue)
-                    _intMap.Add(key,value);
-                return false;
-            }
-            value = _intMap[key];
+            value = FloatMap[key];
             return true;
         }
 
-        public static bool TryGetColor(string key, out Color value , Color defaultValue = default,bool saveDefaultValue = false)
+        public static bool TryGetValue(string key, out bool value, bool defaultValue = default)
         {
             value = defaultValue;
-            if (!_colorMap.ContainsKey(key))
-            {
-                if(saveDefaultValue)
-                    _colorMap.Add(key,value);
+            if (!BoolMap.ContainsKey(key))
                 return false;
-            }
-            value = _colorMap[key];
+            value = BoolMap[key];
             return true;
         }
-        public static bool TryGetVector2(string key, out Vector2 value , Vector2 defaultValue = default,bool saveDefaultValue = false)
+
+        public static bool TryGetValue(string key, out string value, string defaultValue = default)
         {
             value = defaultValue;
-            if (!_vector2Map.ContainsKey(key))
-            {
-                if(saveDefaultValue)
-                    _vector2Map.Add(key,value);
+            if (!StringMap.ContainsKey(key))
                 return false;
-            }
-            value = _vector2Map[key];
+            value = StringMap[key];
             return true;
         }
-        public static bool TryGetVector3(string key, out Vector3 value , Vector3 defaultValue = default,bool saveDefaultValue = false)
+
+        public static bool TryGetValue(string key, out int value, int defaultValue = default)
         {
             value = defaultValue;
-            if (!_vector3Map.ContainsKey(key))
-            {
-                if(saveDefaultValue)
-                    _vector3Map.Add(key,value);
+            if (!IntMap.ContainsKey(key))
                 return false;
-            }
-            value = _vector3Map[key];
+            value = IntMap[key];
             return true;
         }
-        public static bool TryGetVector4(string key , out Vector4 value , Vector4 defaultValue = default,bool saveDefaultValue = false)
+
+        public static bool TryGetValue(string key, out Color value, Color defaultValue = default)
         {
             value = defaultValue;
-            if (!_vector4Map.ContainsKey(key))
-            {
-                if(saveDefaultValue)
-                    _vector4Map.Add(key,value);
+            if (!ColorMap.ContainsKey(key))
                 return false;
-            }
-            value = _vector4Map[key];
+            value = ColorMap[key];
+            return true;
+        }
+
+        public static bool TryGetValue(string key, out Vector2 value, Vector2 defaultValue = default)
+        {
+            value = defaultValue;
+            if (!Vector2Map.ContainsKey(key))
+                return false;
+            value = Vector2Map[key];
+            return true;
+        }
+
+        public static bool TryGetValue(string key, out Vector3 value, Vector3 defaultValue = default)
+        {
+            value = defaultValue;
+            if (!Vector3Map.ContainsKey(key))
+                return false;
+            value = Vector3Map[key];
+            return true;
+        }
+
+        public static bool TryGetValue(string key, out Vector4 value, Vector4 defaultValue = default)
+        {
+            value = defaultValue;
+            if (!Vector4Map.ContainsKey(key))
+                return false;
+            value = Vector4Map[key];
             return true;
         }
     }
-   
+
 
     //数据全局操作
     public static partial class EasyData
     {
-        private static SaveDataContainer GetContainer()
+        private static EasyDataContainer GetContainer()
         {
-            SaveDataContainer container = new()
+            EasyDataContainer container = new()
             {
-                IntMap = _intMap,
-                FloatMap = _floatMap,
-                StringMap = _stringMap,
-                BoolMap = _boolMap,
-                DataMap = _dataMap,
-                ColorMap = _colorMap,
-                Vector2Map = _vector2Map,
-                Vector3Map = _vector3Map,
-                Vector4Map = _vector4Map,
+                IntMap = IntMap,
+                FloatMap = FloatMap,
+                StringMap = StringMap,
+                BoolMap = BoolMap,
+                DataMap = DataMap,
+                ColorMap = ColorMap,
+                Vector2Map = Vector2Map,
+                Vector3Map = Vector3Map,
+                Vector4Map = Vector4Map,
+                KeyToValueMap = KeyToValueMap
             };
             return container;
         }
 
-        private static void LoadContainer(SaveDataContainer container)
+        private static void LoadContainer(EasyDataContainer container)
         {
-            _floatMap = container.FloatMap;
-            _boolMap = container.BoolMap;
-            _stringMap = container.StringMap;
-            _intMap = container.IntMap;
-            _dataMap = container.DataMap;
-            _colorMap = container.ColorMap;
-            _vector2Map = container.Vector2Map;
-            _vector3Map = container.Vector3Map;
-            _vector4Map = container.Vector4Map;
+            DictionaryPool<string, float>.Release(FloatMap);
+            DictionaryPool<string, bool>.Release(BoolMap);
+            DictionaryPool<string, string>.Release(StringMap);
+            DictionaryPool<string, int>.Release(IntMap);
+            DictionaryPool<string, IData>.Release(DataMap);
+            DictionaryPool<string, Color>.Release(ColorMap);
+            DictionaryPool<string, Vector2>.Release(Vector2Map);
+            DictionaryPool<string, Vector3>.Release(Vector3Map);
+            DictionaryPool<string, Vector4>.Release(Vector4Map);
+            DictionaryPool<string, EasyValueType>.Release(KeyToValueMap);
+            FloatMap = container.FloatMap ?? DictionaryPool<string, float>.Get();
+            BoolMap = container.BoolMap ?? DictionaryPool<string, bool>.Get();
+            StringMap = container.StringMap ?? DictionaryPool<string, string>.Get();
+            IntMap = container.IntMap ?? DictionaryPool<string, int>.Get();
+            DataMap = container.DataMap ?? DictionaryPool<string, IData>.Get();
+            ColorMap = container.ColorMap ?? DictionaryPool<string, Color>.Get();
+            Vector2Map = container.Vector2Map ?? DictionaryPool<string, Vector2>.Get();
+            Vector3Map = container.Vector3Map ?? DictionaryPool<string, Vector3>.Get();
+            Vector4Map = container.Vector4Map ?? DictionaryPool<string, Vector4>.Get();
+            KeyToValueMap = container.KeyToValueMap ?? InitKeyToValueMap();
         }
+
+        private static Dictionary<string, EasyValueType> InitKeyToValueMap()
+        {
+            var _keyToValueMap = DictionaryPool<string, EasyValueType>.Get();
+            foreach (var key in FloatMap.Keys)
+                _keyToValueMap[key] = EasyValueType.Float;
+            foreach (var key in BoolMap.Keys)
+                _keyToValueMap[key] = EasyValueType.Boolean;
+            foreach (var key in IntMap.Keys)
+                _keyToValueMap[key] = EasyValueType.Int;
+            foreach (var key in DataMap.Keys)
+                _keyToValueMap[key] = EasyValueType.None;
+            foreach (var key in StringMap.Keys)
+                _keyToValueMap[key] = EasyValueType.String;
+            foreach (var key in ColorMap.Keys)
+                _keyToValueMap[key] = EasyValueType.Color;
+            foreach (var key in Vector2Map.Keys)
+                _keyToValueMap[key] = EasyValueType.Vector2;
+            foreach (var key in Vector3Map.Keys)
+                _keyToValueMap[key] = EasyValueType.Vector3;
+            foreach (var key in Vector4Map.Keys)
+                _keyToValueMap[key] = EasyValueType.Vector4;
+            return _keyToValueMap;
+        }
+
+        /// <summary>
+        /// 判断是否有某个Key
+        /// </summary>
+        /// <param name="key"></param>
+        /// <returns></returns>
         public static bool HasKey(string key)
         {
-            if (_intMap.ContainsKey(key))
-                return true;
-            if (_floatMap.ContainsKey(key))
-                return true;
-            if (_boolMap.ContainsKey(key))
-                return true;
-            if (_stringMap.ContainsKey(key))
-                return true;
-            if (_colorMap.ContainsKey(key))
-                return true;
-            if (_vector2Map.ContainsKey(key))
-                return true;
-            if (_vector3Map.ContainsKey(key))
-                return true;
-            if (_vector4Map.ContainsKey(key))
-                return true;
+            if (TryGetMap(key, out var map))
+                return map.Contains(key);
             return false;
         }
 
+        /// <summary>
+        /// 判断是否有某个Key
+        /// </summary>
+        /// <param name="key"></param>
+        /// <param name="valueType"></param>
+        /// <returns></returns>
         public static bool HasKey(string key, EasyValueType valueType)
         {
-            return valueType switch
-            {
-                EasyValueType.Boolean =>  _boolMap.ContainsKey(key),
-                EasyValueType.Int =>  _intMap.ContainsKey(key),
-                EasyValueType.String =>  _stringMap.ContainsKey(key),
-                EasyValueType.Float =>  _floatMap.ContainsKey(key),
-                EasyValueType.Color =>  _colorMap.ContainsKey(key),
-                EasyValueType.Vector2 =>  _vector2Map.ContainsKey(key),
-                EasyValueType.Vector3 =>  _vector3Map.ContainsKey(key),
-                EasyValueType.Vector4 =>  _vector4Map.ContainsKey(key),
-                _ => _dataMap.ContainsKey(key)
-            };
+            if (TryGetMap(valueType, out var map))
+                return map.Contains(key);
+            return false;
         }
 
+        /// <summary>
+        /// 尝试删除某个Key
+        /// </summary>
+        /// <param name="key"></param>
+        /// <param name="data"></param>
+        /// <typeparam name="T"></typeparam>
+        /// <returns></returns>
+        public static bool TryDelete<T>(string key, T data = default)
+        {
+            IDictionary map = GetMap(data);
+            if (map is null)
+                return false;
+            map.Remove(key);
+            return true;
+        }
+
+        /// <summary>
+        /// 删除Key
+        /// </summary>
+        /// <param name="key"></param>
         public static void Delete(string key)
         {
-            _intMap.Remove(key);
-            _floatMap.Remove(key);
-            _boolMap.Remove(key);
-            _stringMap.Remove(key);
-            _dataMap.Remove(key);
-            _colorMap.Remove(key);
-            _vector2Map.Remove(key);
-            _vector3Map.Remove(key);
-            _vector4Map.Remove(key);
+            IntMap.Remove(key);
+            FloatMap.Remove(key);
+            BoolMap.Remove(key);
+            StringMap.Remove(key);
+            DataMap.Remove(key);
+            ColorMap.Remove(key);
+            Vector2Map.Remove(key);
+            Vector3Map.Remove(key);
+            Vector4Map.Remove(key);
+            KeyToValueMap.Remove(key);
         }
 
+        /// <summary>
+        /// 根据数据类型删除Key
+        /// </summary>
+        /// <param name="key"></param>
+        /// <param name="valueType"></param>
         public static void Delete(string key, EasyValueType valueType)
         {
-            switch (valueType)
-            {
-                case EasyValueType.Boolean:
-                    _boolMap.Remove(key);
-                    break;
-                case EasyValueType.Float:
-                    _floatMap.Remove(key);
-                    break;
-                case EasyValueType.String:
-                    _stringMap.Remove(key);
-                    break;
-                case EasyValueType.Int:
-                    _intMap.Remove(key);
-                    break;
-                case EasyValueType.Color:
-                    _colorMap.Remove(key);
-                    break;
-                case EasyValueType.Vector2:
-                    _vector2Map.Remove(key);
-                    break;
-                case EasyValueType.Vector3:
-                    _vector3Map.Remove(key);
-                    break;
-                case EasyValueType.Vector4:
-                    _vector4Map.Remove(key);
-                    break;
-                default:
-                    _dataMap.Remove(key);
-                    break;
-            }
+            GetMap(valueType).Remove(key);
+            KeyToValueMap.Remove(key);
         }
 
+        /// <summary>
+        /// 清除所有数据
+        /// </summary>
         public static void DeleteAll()
         {
-            _intMap.Clear();
-            _floatMap.Clear();
-            _boolMap.Clear();
-            _stringMap.Clear();
-            _dataMap.Clear();
-            _colorMap.Clear();
-            _vector2Map.Clear();
-            _vector3Map.Clear();
-            _vector4Map.Clear();
+            IntMap.Clear();
+            FloatMap.Clear();
+            BoolMap.Clear();
+            StringMap.Clear();
+            DataMap.Clear();
+            ColorMap.Clear();
+            Vector2Map.Clear();
+            Vector3Map.Clear();
+            Vector4Map.Clear();
+            KeyToValueMap.Clear();
         }
 
+        /// <summary>
+        /// 获得某个键存储的数据类型
+        /// </summary>
+        /// <param name="key"></param>
+        /// <returns></returns>
         public static EasyValueType GetValueType(string key)
         {
-            if (_intMap.ContainsKey(key))
+            if (IntMap.ContainsKey(key))
                 return EasyValueType.Int;
-            if (_boolMap.ContainsKey(key))
+            if (BoolMap.ContainsKey(key))
                 return EasyValueType.Boolean;
-            if (_floatMap.ContainsKey(key))
+            if (FloatMap.ContainsKey(key))
                 return EasyValueType.Float;
-            if (_stringMap.ContainsKey(key))
+            if (StringMap.ContainsKey(key))
                 return EasyValueType.String;
-            if (_colorMap.ContainsKey(key))
+            if (ColorMap.ContainsKey(key))
                 return EasyValueType.Color;
-            if (_vector2Map.ContainsKey(key))
+            if (Vector2Map.ContainsKey(key))
                 return EasyValueType.Vector2;
-            if (_vector3Map.ContainsKey(key))
+            if (Vector3Map.ContainsKey(key))
                 return EasyValueType.Vector3;
-            if (_vector4Map.ContainsKey(key))
+            if (Vector4Map.ContainsKey(key))
                 return EasyValueType.Vector4;
             return EasyValueType.None;
         }
-        
     }
+
+    public static partial class EasyData
+    {
+        private static bool TryGetMap(EasyValueType valueType, out IDictionary map)
+        {
+            map = GetMap(valueType);
+            return map is not null;
+        }
+
+        private static bool TryGetMap<T>(out IDictionary map, T data = default)
+        {
+            map = GetMap(data);
+            return map is not null;
+        }
+
+        private static bool TryGetMap(string key, out IDictionary map)
+        {
+            map = GetMap(key);
+            return map is not null;
+        }
+
+        private static IDictionary GetMap(EasyValueType valueType)
+        {
+            IDictionary map = valueType switch
+            {
+                EasyValueType.None => null,
+                EasyValueType.Float => FloatMap,
+                EasyValueType.Int => IntMap,
+                EasyValueType.Boolean => BoolMap,
+                EasyValueType.String => StringMap,
+                EasyValueType.Color => ColorMap,
+                EasyValueType.Vector2 => Vector2Map,
+                EasyValueType.Vector3 => Vector3Map,
+                EasyValueType.Vector4 => Vector4Map,
+                _ => null
+            };
+            return map;
+        }
+
+        private static IDictionary GetMap(string key)
+        {
+            if (KeyToValueMap.TryGetValue(key, out var value))
+                return GetMap(value);
+            return null;
+        }
+
+        private static IDictionary GetMap<T>(T data = default)
+        {
+            IDictionary map = data switch
+            {
+                float => FloatMap,
+                string => StringMap,
+                bool => BoolMap,
+                int => IntMap,
+                Color => ColorMap,
+                Vector2 => Vector2Map,
+                Vector3 => Vector3Map,
+                Vector4 => Vector4Map,
+                _ => null
+            };
+            return map;
+        }
+    }
+
     //持久化数据操作
     public static partial class EasyData
     {
@@ -503,16 +1156,23 @@ namespace T2TFramework.Data
             _defaultDataPath = path;
         }
 
+        /// <summary>
+        /// 获取当前配置的存档位置
+        /// </summary>
+        /// <returns></returns>
         public static string GetDataPath()
         {
             return _defaultDataPath;
         }
 
+        /// <summary>
+        /// 指定路径保存数据
+        /// </summary>
+        /// <param name="path"></param>
         public static void Save(string path)
         {
-            Save(default,path);
+            Save(default, path);
         }
-
 
         /// <summary>
         /// 保存数据
@@ -522,7 +1182,7 @@ namespace T2TFramework.Data
         /// </param>
         /// <param name="callBack"></param>
         /// <param name="path"></param>
-        public static async void Save(Action<DataSaveState,Exception> callBack = default,string path = default)
+        public static async void Save(Action<DataSaveState, Exception> callBack = default, string path = default)
         {
             if (path == default)
                 path = _defaultDataPath;
@@ -538,7 +1198,7 @@ namespace T2TFramework.Data
                 settings.MissingMemberHandling = MissingMemberHandling.Ignore;
                 settings.MaxDepth = 1;
                 settings.ContractResolver = new ShouldSerialize();
-                string jsonValue = JsonConvert.SerializeObject(GetContainer(),settings);
+                string jsonValue = JsonConvert.SerializeObject(GetContainer(), settings);
                 Debug.Log($"数据大小：{System.Text.Encoding.UTF8.GetByteCount(jsonValue)}");
                 Debug.Log($"保存路径: {path}");
                 await File.WriteAllTextAsync(path, jsonValue, Encoding.UTF8);
@@ -548,8 +1208,9 @@ namespace T2TFramework.Data
                 OnDataSave?.Invoke(DataSaveState.Error);
                 OnThrowException?.Invoke(e);
                 Debug.LogError(e);
-                callBack?.Invoke(DataSaveState.Error,e);
+                callBack?.Invoke(DataSaveState.Error, e);
             }
+
             OnDataSave?.Invoke(DataSaveState.Success);
         }
 
@@ -563,7 +1224,7 @@ namespace T2TFramework.Data
         /// </summary>
         /// <param name="callBack"></param>
         /// <param name="path"></param>
-        public static  async void Load(Action<DataSaveState,Exception> callBack = default,string path = default)
+        public static async void Load(Action<DataSaveState, Exception> callBack = default, string path = default)
         {
             if (path == default)
                 path = _defaultDataPath;
@@ -574,7 +1235,7 @@ namespace T2TFramework.Data
                 string jsonValue = await File.ReadAllTextAsync(path, Encoding.UTF8);
                 Debug.Log($"数据大小：{System.Text.Encoding.UTF8.GetByteCount(jsonValue)}");
                 Debug.Log($"读取路径: {path}");
-                SaveDataContainer container = JsonConvert.DeserializeObject<SaveDataContainer>(jsonValue);
+                EasyDataContainer container = JsonConvert.DeserializeObject<EasyDataContainer>(jsonValue);
                 LoadContainer(container);
             }
             catch (Exception e)
@@ -582,181 +1243,96 @@ namespace T2TFramework.Data
                 OnDataLoad?.Invoke(DataSaveState.Error);
                 OnThrowException?.Invoke(e);
                 Debug.LogError(e);
-                callBack?.Invoke(DataSaveState.Error,e);
+                callBack?.Invoke(DataSaveState.Error, e);
             }
+
             OnDataLoad?.Invoke(DataSaveState.Success);
         }
-#if  UNITY_EDITOR
-        public static bool TryGetKeys(EasyValueType valueType,out string[] keyValues)
-        {
-            keyValues = valueType switch
-            {
-                EasyValueType.Boolean => _boolMap.Keys.ToArray(),
-                EasyValueType.Float => _floatMap.Keys.ToArray(),
-                EasyValueType.String => _stringMap.Keys.ToArray(),
-                EasyValueType.Int => _intMap.Keys.ToArray(),
-                EasyValueType.Color => _colorMap.Keys.ToArray(),
-                EasyValueType.Vector2 => _vector2Map.Keys.ToArray(),
-                EasyValueType.Vector3 => _vector3Map.Keys.ToArray(),
-                EasyValueType.Vector4 => _vector4Map.Keys.ToArray(),
-                _ => null
-            };
-            return keyValues is null;
-        }
-        public static bool TrySearchKey(string keyValue, EasyValueType valueType, out string[] keyValues)
-        {
-            keyValues = null;
-            if (!HasKey(keyValue, valueType))
-                return false;
-            List<string> list = UnityEngine.Pool.ListPool<string>.Get();
-            string[] strings = valueType switch
-            {
-                EasyValueType.Boolean => _boolMap.Keys.ToArray(),
-                EasyValueType.Float => _floatMap.Keys.ToArray(),
-                EasyValueType.String => _stringMap.Keys.ToArray(),
-                EasyValueType.Int => _intMap.Keys.ToArray(),
-                EasyValueType.Color => _colorMap.Keys.ToArray(),
-                EasyValueType.Vector2 => _vector2Map.Keys.ToArray(),
-                EasyValueType.Vector3 => _vector3Map.Keys.ToArray(),
-                EasyValueType.Vector4 => _vector4Map.Keys.ToArray(),
-                _ => null
-            };
-            if (strings is null)
-            {
-                UnityEngine.Pool.ListPool<string>.Release(list);
-                return false;
-            }
-            foreach (var str in strings)
-            {
-                if(str.Contains(keyValue))
-                    list.Add(str);
-            }
-            keyValues = list.ToArray();
-            UnityEngine.Pool.ListPool<string>.Release(list);
-            return true;
-        }
-        public static string[] SearchKey(string keyValue, EasyValueType valueType)
-        {
-            List<string> list = UnityEngine.Pool.ListPool<string>.Get();
-            string[] strings = valueType switch
-            {
-                EasyValueType.Boolean => _boolMap.Keys.ToArray(),
-                EasyValueType.Float => _floatMap.Keys.ToArray(),
-                EasyValueType.String => _stringMap.Keys.ToArray(),
-                EasyValueType.Int => _intMap.Keys.ToArray(),
-                EasyValueType.Color => _colorMap.Keys.ToArray(),
-                EasyValueType.Vector2 => _vector2Map.Keys.ToArray(),
-                EasyValueType.Vector3 => _vector3Map.Keys.ToArray(),
-                EasyValueType.Vector4 => _vector4Map.Keys.ToArray(),
-                _ => null
-            };
-            if (strings is null)
-            {
-                UnityEngine.Pool.ListPool<string>.Release(list);
-                return null;
-            }
-            foreach (var str in strings)
-            {
-                if(str.Contains(keyValue))
-                    list.Add(str);
-            }
-            var res = list.ToArray();
-            UnityEngine.Pool.ListPool<string>.Release(list);
-            return res;
-        }
-
+#if UNITY_EDITOR
         public static (string, EasyValueType)[] GetAllKey()
         {
             List<(string, EasyValueType)> list = UnityEngine.Pool.ListPool<(string, EasyValueType)>.Get();
-            foreach (var key in _intMap.Keys)  
-            {
-                    list.Add((key,EasyValueType.Int));
-            }
-            foreach (var key in _floatMap.Keys)  
-            {
-                    list.Add((key,EasyValueType.Float));
-            }
-            foreach (var key in _stringMap.Keys)  
-            {
-                    list.Add((key,EasyValueType.String));
-            }
-            foreach (var key in _boolMap.Keys)  
-            {
-                    list.Add((key,EasyValueType.Boolean));
-            }
-            foreach (var key in _colorMap.Keys)  
-            {
-                    list.Add((key,EasyValueType.Color));
-            }
-            foreach (var key in _vector2Map.Keys)  
-            {
-                    list.Add((key,EasyValueType.Vector2));
-            }
-            foreach (var key in _vector3Map.Keys)  
-            {
-                    list.Add((key,EasyValueType.Vector3));
-            }
-            foreach (var key in _vector4Map.Keys)  
-            {
-                    list.Add((key,EasyValueType.Vector4));
-            }
-
+            foreach (var key in IntMap.Keys)
+                list.Add((key, EasyValueType.Int));
+            foreach (var key in FloatMap.Keys)
+                list.Add((key, EasyValueType.Float));
+            foreach (var key in StringMap.Keys)
+                list.Add((key, EasyValueType.String));
+            foreach (var key in BoolMap.Keys)
+                list.Add((key, EasyValueType.Boolean));
+            foreach (var key in ColorMap.Keys)
+                list.Add((key, EasyValueType.Color));
+            foreach (var key in Vector2Map.Keys)
+                list.Add((key, EasyValueType.Vector2));
+            foreach (var key in Vector3Map.Keys)
+                list.Add((key, EasyValueType.Vector3));
+            foreach (var key in Vector4Map.Keys)
+                list.Add((key, EasyValueType.Vector4));
             (string, EasyValueType)[] values = list.ToArray();
-            UnityEngine.Pool.ListPool<(string, EasyValueType)>.Release(list);
+            ListPool<(string, EasyValueType)>.Release(list);
             return values;
         }
-        public static (string, EasyValueType)[] SearchKey(string keyValue,StringComparison comparison = StringComparison.Ordinal)
+
+        public static (string, EasyValueType)[] SearchKey(string keyValue,
+            StringComparison comparison = StringComparison.Ordinal)
         {
-            List<(string, EasyValueType)> list = UnityEngine.Pool.ListPool<(string, EasyValueType)>.Get();
-            
-            foreach (var key in _intMap.Keys)  
+            List<(string, EasyValueType)> list = ListPool<(string, EasyValueType)>.Get();
+
+            foreach (var key in IntMap.Keys)
             {
-                if("Int".Contains(keyValue,comparison)||key.Contains(keyValue,comparison))
-                    list.Add((key,EasyValueType.Int));
+                if ("Int".Contains(keyValue, comparison) || key.Contains(keyValue, comparison))
+                    list.Add((key, EasyValueType.Int));
             }
-            foreach (var key in _floatMap.Keys)  
+
+            foreach (var key in FloatMap.Keys)
             {
-                if("Float".Contains(keyValue,comparison)||key.Contains(keyValue,comparison))
-                    list.Add((key,EasyValueType.Float));
+                if ("Float".Contains(keyValue, comparison) || key.Contains(keyValue, comparison))
+                    list.Add((key, EasyValueType.Float));
             }
-            foreach (var key in _stringMap.Keys)  
+
+            foreach (var key in StringMap.Keys)
             {
-                if("String".Contains(keyValue,comparison)||key.Contains(keyValue,comparison))
-                    list.Add((key,EasyValueType.String));
+                if ("String".Contains(keyValue, comparison) || key.Contains(keyValue, comparison))
+                    list.Add((key, EasyValueType.String));
             }
-            foreach (var key in _boolMap.Keys)  
+
+            foreach (var key in BoolMap.Keys)
             {
-                if("Bool".Contains(keyValue,comparison)||key.Contains(keyValue,comparison))
-                    list.Add((key,EasyValueType.Boolean));
+                if ("Bool".Contains(keyValue, comparison) || key.Contains(keyValue, comparison))
+                    list.Add((key, EasyValueType.Boolean));
             }
-            foreach (var key in _colorMap.Keys)  
+
+            foreach (var key in ColorMap.Keys)
             {
-                if("Color".Contains(keyValue,comparison)||key.Contains(keyValue,comparison))
-                    list.Add((key,EasyValueType.Color));
+                if ("Color".Contains(keyValue, comparison) || key.Contains(keyValue, comparison))
+                    list.Add((key, EasyValueType.Color));
             }
-            foreach (var key in _vector2Map.Keys)  
+
+            foreach (var key in Vector2Map.Keys)
             {
-                if("Vector2".Contains(keyValue,comparison)||key.Contains(keyValue,comparison))
-                    list.Add((key,EasyValueType.Vector2));
+                if ("Vector2".Contains(keyValue, comparison) || key.Contains(keyValue, comparison))
+                    list.Add((key, EasyValueType.Vector2));
             }
-            foreach (var key in _vector3Map.Keys)  
+
+            foreach (var key in Vector3Map.Keys)
             {
-                if("Vector3".Contains(keyValue,comparison)||key.Contains(keyValue,comparison))
-                    list.Add((key,EasyValueType.Vector3));
+                if ("Vector3".Contains(keyValue, comparison) || key.Contains(keyValue, comparison))
+                    list.Add((key, EasyValueType.Vector3));
             }
-            foreach (var key in _vector4Map.Keys)  
+
+            foreach (var key in Vector4Map.Keys)
             {
-                if("Vector4".Contains(keyValue,comparison)||key.Contains(keyValue,comparison))
-                    list.Add((key,EasyValueType.Vector4));
+                if ("Vector4".Contains(keyValue, comparison) || key.Contains(keyValue, comparison))
+                    list.Add((key, EasyValueType.Vector4));
             }
 
             (string, EasyValueType)[] values = list.ToArray();
-            UnityEngine.Pool.ListPool<(string, EasyValueType)>.Release(list);
+            ListPool<(string, EasyValueType)>.Release(list);
             return values;
         }
 #endif
-        
     }
+
     public static partial class EasyData
     {
         /// <summary>
@@ -764,32 +1340,38 @@ namespace T2TFramework.Data
         /// </summary>
         public static void SyncToPlayerPrefs()
         {
-            string[] keys = _intMap.Keys.ToArray();
+            string[] keys = IntMap.Keys.ToArray();
             foreach (var key in keys)
             {
-                PlayerPrefs.SetInt(key,_intMap[key]);
+                PlayerPrefs.SetInt(key, IntMap[key]);
             }
-            keys = _boolMap.Keys.ToArray();
+
+            keys = BoolMap.Keys.ToArray();
             foreach (var key in keys)
             {
-                PlayerPrefs.SetInt(key,_boolMap[key]?0:1);
+                PlayerPrefs.SetInt(key, BoolMap[key] ? 0 : 1);
             }
-            keys = _floatMap.Keys.ToArray();
+
+            keys = FloatMap.Keys.ToArray();
             foreach (var key in keys)
             {
-                PlayerPrefs.SetFloat(key,_floatMap[key]);
+                PlayerPrefs.SetFloat(key, FloatMap[key]);
             }
-            keys = _stringMap.Keys.ToArray();
+
+            keys = StringMap.Keys.ToArray();
             foreach (var key in keys)
             {
-                PlayerPrefs.SetString(key,_stringMap[key]);
+                PlayerPrefs.SetString(key, StringMap[key]);
             }
         }
     }
+
     public enum DataSaveState
     {
-        Success,Error
+        Success,
+        Error
     }
+
     public enum EasyValueType
     {
         None,
@@ -807,11 +1389,11 @@ namespace T2TFramework.Data
     {
         protected override JsonProperty CreateProperty(MemberInfo member, MemberSerialization memberSerialization)
         {
-            JsonProperty property =  base.CreateProperty(member, memberSerialization);
+            JsonProperty property = base.CreateProperty(member, memberSerialization);
             bool isPublic = member switch
             {
                 FieldInfo f => f.IsPublic,
-                PropertyInfo p => (!(p.SetMethod is  null || !p.SetMethod.IsPublic) && p.GetGetMethod().IsPublic),
+                PropertyInfo p => (!(p.SetMethod is null || !p.SetMethod.IsPublic) && p.GetGetMethod().IsPublic),
                 _ => false
             };
             property.ShouldSerialize = _ => isPublic;
